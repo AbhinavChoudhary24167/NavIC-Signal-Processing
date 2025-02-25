@@ -1,0 +1,77 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "RSP.h"
+
+#define C_LEN 1023
+#define SATELLITE_NO 7
+#define FS_TX 1023000.0
+#define FS_RX 2000000.0
+#define T 0.001
+#define C 3.0e8
+#define NFFT 2048
+#define DETECTION_THRESHOLD 3
+#define N 4
+
+// Function to load PRN codes (placeholder for actual implementation)
+void load_navic_prn(double navic_prn[C_LEN][SATELLITE_NO]);
+
+// Function to perform FFT (placeholder)
+void fft(double* in, double* out, int n);
+
+// Function to perform IFFT (placeholder)
+void ifft(double* in, double* out, int n);
+
+int main() {
+    double navic_prn[C_LEN][SATELLITE_NO];
+    load_navic_prn(navic_prn);
+    
+    double fracRepFactor = FS_RX / FS_TX;
+    int upfac, downfac;
+    upfac = (int)(fracRepFactor + 0.5);
+    downfac = 1;
+    
+    // Resample PRN sequence at receiver
+    double ca_code[NFFT][SATELLITE_NO];
+    for (int s = 0; s < SATELLITE_NO; s++) {
+        for (int i = 0; i < NFFT; i++) {
+            int idx = (i * downfac) / upfac;
+            if (idx < C_LEN) {
+                ca_code[i][s] = navic_prn[idx][s];
+            } else {
+                ca_code[i][s] = 0;
+            }
+        }
+    }
+    
+    for (int j = 1; j <= N; j++) {
+        printf("Test Case: %d\n", j);
+        
+        // Placeholder for loading input signal data
+        double in_signal[NFFT];
+        
+        double fft_prn[NFFT][SATELLITE_NO];
+        for (int s = 0; s < SATELLITE_NO; s++) {
+            fft(ca_code[s], fft_prn[s], NFFT);
+        }
+        
+        // Signal acquisition loop
+        int sel_satind = 0;
+        for (int prnid = 0; prnid < SATELLITE_NO; prnid++) {
+            double mag_out_rd[NFFT][SATELLITE_NO];
+            double peak_mag;
+            int peak_idx;
+            
+            RSP(mag_out_rd, &peak_mag, &peak_idx, fft_prn[prnid], in_signal);
+            
+            // Check detection threshold
+            if (peak_mag > DETECTION_THRESHOLD) {
+                printf("Satellite %d: Detection Threshold Met\n", prnid + 1);
+                sel_satind = prnid + 1;
+            } else {
+                printf("Satellite %d: Detection Not Met\n", prnid + 1);
+            }
+        }
+    }
+    return 0;
+}
